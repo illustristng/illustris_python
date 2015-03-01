@@ -3,7 +3,6 @@ groupcat.py: File I/O related to the FoF and Subfind group catalogs. """
 
 import numpy as np
 import h5py
-import pdb
 
 def gcPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a group catalog HDF5 file (modify as needed). """
@@ -17,17 +16,29 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
     """ Load either halo or subhalo information from the group catalog. """
     result = {}
     
+    # make sure fields is not a single element
+    if isinstance(fields, basestring):
+        fields = [fields]    
+    
     # load header from first chunk
     with h5py.File(gcPath(basePath,snapNum),'r') as f:
 
         header = dict( f['Header'].attrs.items() )
         result['count'] = f['Header'].attrs['N'+nName+'_Total']
         
+        if not result['count']:
+            print 'warning: zero groups, empty return (snap='+str(snapNum)+').'
+            return result
+        
         # if fields not specified, load everything
         if not fields:
             fields = f[gName].keys()
         
         for field in fields:
+            # verify existence
+            if not field in f[gName].keys():
+                raise Exception("Group catalog does not have requested field ["+field+"]!")
+                
             # replace local length with global
             shape = list(f[gName][field].shape)
             shape[0] = result['count']
@@ -41,6 +52,9 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
     for i in range(header['NumFiles']):
         filePath = gcPath(basePath,snapNum,i)
         f = h5py.File(filePath,'r')
+        
+        if not f['Header'].attrs['N'+nName+'_ThisFile']:
+            continue # empty file chunk
         
         # loop over each requested field for this particle type
         for field in fields:
