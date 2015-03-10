@@ -85,6 +85,21 @@ def loadHalos(basePath,snapNum,fields=None):
     
     return loadObjects(basePath,snapNum,"Group","groups",fields)
     
+def loadHeader(basePath,snapNum):
+    """ Load the group catalog header. """
+    with h5py.File(gcPath(basePath,snapNum),'r') as f:
+        header = dict( f['Header'].attrs.items() )
+        
+    return header
+    
+def load(basePath,snapNum):
+    """ Load complete group catalog at once. """
+    r = {}
+    r['subhalos'] = loadSubhalos(basePath,snapNum)
+    r['halos']    = loadHalos(basePath,snapNum)
+    r['header']   = loadHeader(basePath,snapNum)
+    return r
+    
 def loadSingle(fileBase,snapNum,haloID=None,subhaloID=None):
     """ Return complete subhalo (subfind) information on one group. 
         Search for subhalo/subgroup if getGroup==0, else search for halo/fof group. """
