@@ -7,6 +7,7 @@ import pdb
 import glob
 
 from groupcat import gcPath
+from util import partTypeNum
 
 def treePath(basePath,chunkNum=0):
     """ Return absolute path to a SubLink HDF5 file (modify as needed). """
@@ -32,7 +33,7 @@ def treeOffsets(basePath, snapNum, id):
         SubhaloID  = f['Offsets']['Subhalo_SublinkSubhaloID'][groupOffset]
         return RowNum,LastProgID,SubhaloID
         
-def loadTree(basePath, snapNum, id, fields=None):
+def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     """ Load portion of Sublink tree, for a given subhalo, in its existing flat format. """    
     # the tree is all subhalos between SubhaloID and LastProgenitorID
     RowNum,LastProgID,SubhaloID = treeOffsets(basePath, snapNum, id)
@@ -42,6 +43,7 @@ def loadTree(basePath, snapNum, id, fields=None):
     nRows    = rowEnd - rowStart + 1
     
     # create quick offset table for rows in the SubLink files
+    # if you are loading thousands or millions of sub-trees, you may wish to cache this offsets array
     numTreeFiles = len(glob.glob(treePath(basePath,'*')))
     offsets = np.zeros( numTreeFiles, dtype='int64' )
     
@@ -54,11 +56,20 @@ def loadTree(basePath, snapNum, id, fields=None):
     fileNum = np.max(np.where( rowOffsets >= 0 ))
     fileOff = rowOffsets[fileNum]
     
+    # load only main progenitor branch? in this case, get MainLeafProgenitorID now
+    if onlyMPB:
+        with h5py.File(treePath(basePath,fileNum),'r') as f:
+            MainLeafProgenitorID = f['MainLeafProgenitorID'][fileOff]
+            
+        # re-calculate nRows
+        rowEnd = RowNum + (MainLeafProgenitorID - SubhaloID)
+        nRows  = rowEnd - rowStart + 1
+    
     # loop over chunks
     wOffset = 0
     nRowsOrig = nRows
     
-    result = {}
+    result = {'count':nRows}
     
     while nRows:
         f = h5py.File(treePath(basePath,fileNum),'r')
@@ -72,9 +83,6 @@ def loadTree(basePath, snapNum, id, fields=None):
         
         if fileOff + nRowsLocal > f['SubfindID'].shape[0]:
             nRowsLocal = f['SubfindID'].shape[0] - fileOff
-        
-        #print '['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(nRowsLocal)+\
-        #      '] of ['+str(f['SubfindID'].shape[0])+'] remaining = '+str(nRows-nRowsLocal)
         
         # loop over each requested field: allocate if not already
         for field in fields:
@@ -106,3 +114,54 @@ def loadTree(basePath, snapNum, id, fields=None):
         return result[fields[0]]
            
     return result
+
+def maxPastMass(tree, index, partType='stars'):
+    """ Get maximum past mass (of the given partType) along the main branch of a subhalo
+        specified by index within this tree. """
+    ptNum = partTypeNum(partType)
+    
+    branchSize = tree['MainLeafProgenitorID'][index] - tree['SubhaloID'][index] + 1
+    masses = tree['SubhaloMassType'][index : index + branchSize, ptNum]
+    return np.max(masses)
+    
+def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0):
+    """ Calculate the number of mergers in this sub-tree (optionally above some mass ratio threshold). """
+    # verify the input sub-tree has the required fields
+    reqFields = ['SubhaloID','NextProgenitorID','MainLeafProgenitorID',
+                 'FirstProgenitorID','SubhaloMassType']
+    
+    if not set(reqFields).issubset(tree.keys()):
+        print 'Error: Input tree needs to have loaded fields: '+','.join(reqFields)
+        return None
+        
+    numMergers   = 0
+    invMassRatio = 1.0 / minMassRatio
+ 
+    # walk back main progenitor branch
+    rootID = tree['SubhaloID'][index]
+    fpID   = tree['FirstProgenitorID'][index]
+    
+    while fpID != -1:
+        fpIndex = index + (fpID - rootID)
+        fpMass  = maxPastMass(tree, fpIndex, massPartType)
+ 
+        # explore breadth
+        npID = tree['NextProgenitorID'][fpIndex]
+        
+        while npID != -1:
+            npIndex = index + (npID - rootID)
+            npMass  = maxPastMass(tree, npIndex, massPartType)
+            
+            # count if both masses are non-zero, and ratio exceeds threshold
+            if fpMass > 0.0 and npMass > 0.0:
+                ratio = npMass / fpMass
+                
+                if ratio >= minMassRatio and ratio <= invMassRatio:
+                    numMergers += 1
+ 
+            npID = tree['NextProgenitorID'][npIndex]
+ 
+        fpID = tree['FirstProgenitorID'][fpIndex]
+ 
+    return numMergers
+    

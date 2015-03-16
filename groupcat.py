@@ -71,6 +71,10 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
         wOffset += shape[0]
         f.close()
         
+    # only a single field? then return the array instead of a single item dict
+    if len(fields) == 1:
+        return result[fields[0]]
+        
     return result
         
 def loadSubhalos(basePath,snapNum,fields=None):
