@@ -3,7 +3,6 @@ snapshot.py: File I/O related to the snapshot files. """
 
 import numpy as np
 import h5py
-import pdb
 from util import partTypeNum
 from groupcat import gcPath
 
@@ -79,7 +78,7 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
             shape = list(f[gName][field].shape)
             shape[0] = numToRead
             
-            print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype
+            #print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype
         
             # allocate within return dict
             result[field] = np.zeros( shape, dtype=f[gName][field].dtype )
@@ -106,8 +105,8 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
         if fileOff + numToReadLocal > numTypeLocal:
             numToReadLocal = numTypeLocal - fileOff
         
-        print '['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
-              '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal)
+        #print '['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
+        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal)
         
         # loop over each requested field for this particle type
         for field in fields:
