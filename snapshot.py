@@ -5,6 +5,7 @@ import numpy as np
 import h5py
 import pdb
 from util import partTypeNum
+from groupcat import gcPath
 
 def snapPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
@@ -24,8 +25,9 @@ def getNumPart(header):
         
     return nPart    
     
-def loadSubset(basePath,snapNum,partType,fields):
-    """ Load a subset of fields for all particles/cells of a given partType. """
+def loadSubset(basePath,snapNum,partType,fields,subset=None):
+    """ Load a subset of fields for all particles/cells of a given partType.
+        If offset and length specified, load only that subset of the partType. """
     result = {}
     
     ptNum = partTypeNum(partType)
@@ -46,6 +48,18 @@ def loadSubset(basePath,snapNum,partType,fields):
             print 'warning: no particles of requested type, empty return.'
             return result
             
+        # decide global read size, starting file chunk, and starting file chunk offset
+        if subset:
+            offsetsThisType = subset['offsetType'][ptNum] - subset['snapOffsets'][ptNum,:]
+            
+            fileNum = np.max(np.where( offsetsThisType >= 0 ))
+            fileOff = offsetsThisType[fileNum]
+            numToRead = subset['lenType'][ptNum]
+        else:
+            fileNum = 0
+            fileOff = 0
+            numToRead = nPart[ptNum]
+            
         # find a chunk with this particle type
         i = 1        
         while gName not in f:
@@ -63,47 +77,91 @@ def loadSubset(basePath,snapNum,partType,fields):
                 
             # replace local length with global
             shape = list(f[gName][field].shape)
-            shape[0] = nPart[ptNum]
+            shape[0] = numToRead
             
-            #print 'Load:',partType,field,nPart[ptNum],f[gName][field].dtype
+            print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype
         
             # allocate within return dict
             result[field] = np.zeros( shape, dtype=f[gName][field].dtype )
         
     # loop over chunks
     wOffset = 0
+    origNumToRead = numToRead
     
-    for i in range(header['NumFilesPerSnapshot']):
-        filePath = snapPath(basePath,snapNum,i)
+    while numToRead:
+        filePath = snapPath(basePath,snapNum,fileNum)
         f = h5py.File(filePath,'r')
         
+        # no particles of requested type in this file chunk?
         if not gName in f:
-            continue # no particles of requested type in this file chunk
+            if subset:
+                raise Exception('Read error: subset read should be contiguous.')
+            continue
+        
+        # set local read length for this file chunk, truncate to be within the local size
+        numTypeLocal = f['Header'].attrs['NumPart_ThisFile'][ptNum]
+        
+        numToReadLocal = numToRead
+        
+        if fileOff + numToReadLocal > numTypeLocal:
+            numToReadLocal = numTypeLocal - fileOff
+        
+        print '['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
+              '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal)
         
         # loop over each requested field for this particle type
         for field in fields:
-            # read data local to the current file, stamp
-            shape = f[gName][field].shape
-            
-            if len(shape) == 1:
-                result[field][wOffset:wOffset+shape[0]] = f[gName][field][0:shape[0]]
-            else:
-                result[field][wOffset:wOffset+shape[0],:] = f[gName][field][0:shape[0],:]
+            # read data local to the current file
+            result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
         
-
-        wOffset += shape[0]
+        wOffset   += numToReadLocal
+        numToRead -= numToReadLocal
+        fileNum   += 1
+        fileOff    = 0 # start at beginning of all file chunks other than the first
+        
         f.close()
         
     # verify we read the correct number
-    if nPart[ptNum] != wOffset:
-        raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(nPart[ptNum])+"]!")
+    if origNumToRead != wOffset:
+        raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]!")
+        
+    # only a single field? then return the array instead of a single item dict
+    if len(fields) == 1:
+        return result[fields[0]]
         
     return result
         
-def loadSubhalo():
-    # compute offsets, call loadSubset
-    pass
+def getSnapOffsets(basePath,snapNum,id,type):
+    """ Compute offsets within snapshot for a particular group/subgroup. """
+    r = {}
     
-def loadHalo():
-    # compute offset, call loadSubset
-    pass
+    # load groupcat chunk offsets from header of first file
+    with h5py.File(gcPath(basePath,snapNum),'r') as f:
+        groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
+
+        # load the offsets for the snapshot chunks
+        r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
+    
+    # calculate target groups file chunk which contains this id
+    groupFileOffsets = int(id) - groupFileOffsets
+    fileNum = np.max( np.where(groupFileOffsets >= 0) )
+    groupOffset = groupFileOffsets[fileNum]
+    
+    # load the length (by type) of this group/subgroup from the group catalog
+    with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
+        r['lenType'] = f[type][type+'LenType'][groupOffset,:]
+        
+        # load the offset (by type) of this group/subgroup within the snapshot
+        r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset,:]
+    
+    return r
+        
+def loadSubhalo(basePath,snapNum,id,partType,fields=None):
+    # load subhalo length, compute offset, call loadSubset
+    subset = getSnapOffsets(basePath,snapNum,id,"Subhalo")
+    return loadSubset(basePath,snapNum,partType,fields,subset=subset)
+    
+def loadHalo(basePath,snapNum,id,partType,fields=None):
+    # load halo length, compute offset, call loadSubset
+    subset = getSnapOffsets(basePath,snapNum,id,"Group")
+    return loadSubset(basePath,snapNum,partType,fields,subset=subset)

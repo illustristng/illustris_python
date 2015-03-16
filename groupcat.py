@@ -7,7 +7,7 @@ import h5py
 def gcPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a group catalog HDF5 file (modify as needed). """
     gcPath = basePath + '/groups_' + str(snapNum).zfill(3) + '/'
-    filePath = gcPath + 'fof_subhalo_tab_' + str(snapNum).zfill(3)
+    filePath = gcPath + 'groups_' + str(snapNum).zfill(3)
     filePath += '.' + str(chunkNum) + '.hdf5'
     
     return filePath
@@ -18,7 +18,7 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
     
     # make sure fields is not a single element
     if isinstance(fields, basestring):
-        fields = [fields]    
+        fields = [fields]
     
     # load header from first chunk
     with h5py.File(gcPath(basePath,snapNum),'r') as f:
@@ -100,34 +100,29 @@ def load(basePath,snapNum):
     r['header']   = loadHeader(basePath,snapNum)
     return r
     
-def loadSingle(fileBase,snapNum,haloID=None,subhaloID=None):
-    """ Return complete subhalo (subfind) information on one group. 
-        Search for subhalo/subgroup if getGroup==0, else search for halo/fof group. """
+def loadSingle(basePath,snapNum,haloID=None,subhaloID=None):
+    """ Return complete group catalog information for one halo or subhalo. """
 
     if (not haloID and not subhaloID) or (haloID and subhaloID):
         raise Exception("Must specify either haloID or subhaloID (and not both).")
         
     dsetName = "Subhalo" if subhaloID else "Group"
+    searchID = subhaloID if subhaloID else haloID
  
     # load groupcat offsets, calculate target file and offset
-    filePath = fileBase + '/postprocessing/offsets/offsets_'+dsetName.lower()+'_'+str(snapNum)+'.npy'
-    offsets = np.load(filePath)
+    with h5py.File(gcPath(fileBase,snapNum),'r') as f:
+        offsets = f['Header'].attrs['FileOffsets_'+dsetName]
  
     offsets = searchID - offsets
     fileNum = np.max( np.where(offsets >= 0) )
     groupOffset = offsets[fileNum]
  
     # load subhalo fields into a dict
-    filePath = fileBase + '/output/groups_' + str(snapNum).zfill(3) + '/'
-    filePath += 'fof_subhalo_tab_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
- 
     result = {}
- 
-    f = h5py.File(filePath,'r')
- 
-    for haloProp in f[dsetName].keys():
-        result[haloProp] = f[dsetName][haloProp][groupOffset]
- 
-    f.close()
+    
+    with h5py.File(gcPath(fileBase,snapNum,fileNum),'r'):
+        for haloProp in f[dsetName].keys():
+            result[haloProp] = f[dsetName][haloProp][groupOffset]
+            
     return result
     
