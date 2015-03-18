@@ -3,7 +3,6 @@ sublink.py: File I/O related to the Sublink merger tree files. """
 
 import numpy as np
 import h5py
-import pdb
 import glob
 
 from groupcat import gcPath
@@ -41,6 +40,10 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     rowStart = RowNum
     rowEnd   = RowNum + (LastProgID - SubhaloID)
     nRows    = rowEnd - rowStart + 1
+    
+    # make sure fields is not a single element
+    if isinstance(fields, basestring):
+        fields = [fields]
     
     # create quick offset table for rows in the SubLink files
     # if you are loading thousands or millions of sub-trees, you may wish to cache this offsets array
