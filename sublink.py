@@ -68,50 +68,25 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
         rowEnd = RowNum + (MainLeafProgenitorID - SubhaloID)
         nRows  = rowEnd - rowStart + 1
     
-    # loop over chunks
-    wOffset = 0
-    nRowsOrig = nRows
-    
+    # read
     result = {'count':nRows}
     
-    while nRows:
-        f = h5py.File(treePath(basePath,fileNum),'r')
-        
-        # if no fields requested, return everything
+    with h5py.File(treePath(basePath,fileNum),'r') as f:        
+        # if no fields requested, return all fields
         if not fields:
             fields = f.keys()
         
-        # set local read length for this file chunk, truncate to be within the local size
-        nRowsLocal = nRows
+        if fileOff + nRows > f['SubfindID'].shape[0]:
+            raise Exception('Should not occur. Each tree is contained within a single file.')
         
-        if fileOff + nRowsLocal > f['SubfindID'].shape[0]:
-            nRowsLocal = f['SubfindID'].shape[0] - fileOff
-        
-        # loop over each requested field: allocate if not already
+        # loop over each requested field
         for field in fields:
             if field not in f.keys():
                 raise Exception("SubLink tree does not have field ["+field+"]")
                 
-            if field not in result:
-                shape = list(f[field].shape)
-                shape[0] = nRows
-                
-                result[field] = np.zeros( tuple(shape), dtype=f[field].dtype )
-                
-        # loop over each requested field: read and save
-        for field in fields:
-            result[field][wOffset:wOffset+nRowsLocal] = f[field][fileOff:fileOff+nRowsLocal]
-            
-        wOffset += nRowsLocal
-        nRows   -= nRowsLocal
-        fileNum += 1
-        fileOff  = 0
-            
-        f.close()
-            
-    if nRowsOrig != wOffset:
-        raise Exception("Read ["+str(wOffset)+"] entries, but was expecting ["+str(nRowsOrig)+"]!")
-           
+            # read
+            result[field] = f[field][fileOff:fileOff+nRows]
+
     # only a single field? then return the array instead of a single item dict
     if len(fields) == 1:
         return result[fields[0]]
