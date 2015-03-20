@@ -13,7 +13,9 @@ def partTypeNum(partType):
     if str(partType).lower() in ['tracer','tracers','tracermc','trmc']:
         return 3
     if str(partType).lower() in ['star','stars','stellar']:
-        return 4
+        return 4 # only those with GFM_StellarFormationTime>0
+    if str(partType).lower() in ['wind']:
+        return 4 # only those with GFM_StellarFormationTime<0
     if str(partType).lower() in ['bh','bhs','blackhole','blackholes']:
         return 5
     
