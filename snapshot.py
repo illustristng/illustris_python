@@ -18,13 +18,13 @@ def getNumPart(header):
     """ Calculate number of particles of all types given a snapshot header. """
     nTypes = 6
     
-    nPart = np.zeros( 6, dtype=np.int64 )
-    for j in range(6):
+    nPart = np.zeros( nTypes, dtype=np.int64 )
+    for j in range(nTypes):
         nPart[j] = header['NumPart_Total'][j] | (header['NumPart_Total_HighWord'][j] << 32)
         
     return nPart    
     
-def loadSubset(basePath,snapNum,partType,fields,subset=None):
+def loadSubset(basePath,snapNum,partType,fields=None,subset=None):
     """ Load a subset of fields for all particles/cells of a given partType.
         If offset and length specified, load only that subset of the partType. """
     result = {}
@@ -41,11 +41,6 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
 
         header = dict( f['Header'].attrs.items() )
         nPart = getNumPart(header)
-        result['count'] = nPart[ptNum]
-        
-        if not nPart[ptNum]:
-            print 'warning: no particles of requested type, empty return.'
-            return result
             
         # decide global read size, starting file chunk, and starting file chunk offset
         if subset:
@@ -58,6 +53,12 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
             fileNum = 0
             fileOff = 0
             numToRead = nPart[ptNum]
+            
+        result['count'] = numToRead
+        
+        if not numToRead:
+            print 'warning: no particles of requested type, empty return.'
+            return result
             
         # find a chunk with this particle type
         i = 1        
@@ -72,7 +73,7 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
         for field in fields:                
             # verify existence
             if not field in f[gName].keys():
-                raise Exception("Particle type ["+str(ptNum)+"] does not have field ["+field+"]!")
+                raise Exception("Particle type ["+str(ptNum)+"] does not have field ["+field+"]")
                 
             # replace local length with global
             shape = list(f[gName][field].shape)
@@ -88,13 +89,13 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
     origNumToRead = numToRead
     
     while numToRead:
-        filePath = snapPath(basePath,snapNum,fileNum)
-        f = h5py.File(filePath,'r')
+        f = h5py.File(snapPath(basePath,snapNum,fileNum),'r')
         
         # no particles of requested type in this file chunk?
         if not gName in f:
             if subset:
                 raise Exception('Read error: subset read should be contiguous.')
+            fileNum += 1
             continue
         
         # set local read length for this file chunk, truncate to be within the local size
@@ -122,7 +123,7 @@ def loadSubset(basePath,snapNum,partType,fields,subset=None):
         
     # verify we read the correct number
     if origNumToRead != wOffset:
-        raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]!")
+        raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]")
         
     # only a single field? then return the array instead of a single item dict
     if len(fields) == 1:

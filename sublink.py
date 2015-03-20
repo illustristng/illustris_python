@@ -109,8 +109,7 @@ def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0):
                  'FirstProgenitorID','SubhaloMassType']
     
     if not set(reqFields).issubset(tree.keys()):
-        print 'Error: Input tree needs to have loaded fields: '+','.join(reqFields)
-        return None
+        raise Exception('Error: Input tree needs to have loaded fields: '+','.join(reqFields))
         
     numMergers   = 0
     invMassRatio = 1.0 / minMassRatio

@@ -50,18 +50,17 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
     wOffset = 0
     
     for i in range(header['NumFiles']):
-        filePath = gcPath(basePath,snapNum,i)
-        f = h5py.File(filePath,'r')
+        f = h5py.File(gcPath(basePath,snapNum,i),'r')
         
         if not f['Header'].attrs['N'+nName+'_ThisFile']:
             continue # empty file chunk
         
-        # loop over each requested field for this particle type
+        # loop over each requested field
         for field in fields:
             # shape and type
             shape = f[gName][field].shape
  
-            # read data local to the current file (allocate dataset if it does not already exist)
+            # read data local to the current file
             if len(shape) == 1:
                 result[field][wOffset:wOffset+shape[0]] = f[gName][field][0:shape[0]]
             else:
@@ -110,23 +109,23 @@ def loadSingle(basePath,snapNum,haloID=None,subhaloID=None):
     if (not haloID and not subhaloID) or (haloID and subhaloID):
         raise Exception("Must specify either haloID or subhaloID (and not both).")
         
-    dsetName = "Subhalo" if subhaloID else "Group"
+    gName = "Subhalo" if subhaloID else "Group"
     searchID = subhaloID if subhaloID else haloID
  
     # load groupcat offsets, calculate target file and offset
     with h5py.File(gcPath(fileBase,snapNum),'r') as f:
-        offsets = f['Header'].attrs['FileOffsets_'+dsetName]
+        offsets = f['Header'].attrs['FileOffsets_'+gName]
  
     offsets = searchID - offsets
     fileNum = np.max( np.where(offsets >= 0) )
     groupOffset = offsets[fileNum]
  
-    # load subhalo fields into a dict
+    # load halo/subhalo fields into a dict
     result = {}
     
     with h5py.File(gcPath(fileBase,snapNum,fileNum),'r'):
-        for haloProp in f[dsetName].keys():
-            result[haloProp] = f[dsetName][haloProp][groupOffset]
+        for haloProp in f[gName].keys():
+            result[haloProp] = f[gName][haloProp][groupOffset]
             
     return result
     

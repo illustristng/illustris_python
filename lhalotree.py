@@ -3,7 +3,6 @@ lhalotree.py: File I/O related to the LHaloTree merger tree files. """
 
 import numpy as np
 import h5py
-import pdb
 
 from groupcat import gcPath
 from util import partTypeNum
@@ -67,7 +66,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     """ Load portion of LHaloTree, for a given subhalo, re-arranging into a flat format. """
     TreeFile,TreeIndex,TreeNum = treeOffsets(basePath, snapNum, id)
     
-    result = {}
+    # config
     gName  = 'Tree' + str(TreeNum) # group name containing this subhalo
     nRows  = None # we do not know in advance the size of the tree
     
@@ -97,6 +96,9 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     dummy = np.zeros( conn['FirstProgenitor'].shape, dtype='int32' )
     nRows = singleNodeFlat(conn, TreeIndex, dummy, dummy, 0, onlyMPB)
           
+    result = {}
+    result['count'] = nRows
+          
     # walk through connectivity, one data field at a time
     for field in fields:
         # load field for entire tree? doing so is much faster than randomly accessing the disk 
@@ -117,7 +119,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
         
         data = np.zeros(shape, dtype=dtype)
         
-        # in-memory random walk, depth-first
+        # walk the tree, depth-first
         count = singleNodeFlat(conn, TreeIndex, full_data, data, 0, onlyMPB)          
         
         # save field
