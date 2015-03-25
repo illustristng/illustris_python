@@ -34,8 +34,8 @@ def treeOffsets(basePath, snapNum, id):
 def singleNodeFlat(conn, index, data_in, data_out, count, onlyMPB):
     """ Recursive helper function: Add a single tree node. """
     data_out[count] = data_in[index]
-    count += 1
     
+    count += 1
     count = recProgenitorFlat(conn,index,data_in,data_out,count,onlyMPB)
     
     return count

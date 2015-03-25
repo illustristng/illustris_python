@@ -33,7 +33,8 @@ def treeOffsets(basePath, snapNum, id):
         return RowNum,LastProgID,SubhaloID
         
 def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
-    """ Load portion of Sublink tree, for a given subhalo, in its existing flat format. """    
+    """ Load portion of Sublink tree, for a given subhalo, in its existing flat format.
+        (optionally restricted to a subset fields). """
     # the tree is all subhalos between SubhaloID and LastProgenitorID
     RowNum,LastProgID,SubhaloID = treeOffsets(basePath, snapNum, id)
     
