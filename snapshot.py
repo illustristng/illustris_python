@@ -157,11 +157,15 @@ def getSnapOffsets(basePath,snapNum,id,type):
     return r
         
 def loadSubhalo(basePath,snapNum,id,partType,fields=None):
+    """ Load all particles/cells of one type for a specific subhalo
+        (optionally restricted to a subset fields). """
     # load subhalo length, compute offset, call loadSubset
     subset = getSnapOffsets(basePath,snapNum,id,"Subhalo")
     return loadSubset(basePath,snapNum,partType,fields,subset=subset)
     
 def loadHalo(basePath,snapNum,id,partType,fields=None):
+    """ Load all particles/cells of one type for a specific halo
+        (optionally restricted to a subset fields). """
     # load halo length, compute offset, call loadSubset
     subset = getSnapOffsets(basePath,snapNum,id,"Group")
     return loadSubset(basePath,snapNum,partType,fields,subset=subset)

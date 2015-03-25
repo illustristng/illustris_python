@@ -6,8 +6,8 @@ import h5py
 
 def gcPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a group catalog HDF5 file (modify as needed). """
-    gcPath = basePath + '/groups_' + str(snapNum).zfill(3) + '/'
-    filePath = gcPath + 'groups_' + str(snapNum).zfill(3)
+    gcPath = basePath + '/postprocessing/groups_new2/groups_' + str(snapNum).zfill(3) + '/'
+    filePath = gcPath + 'groups_' + str(snapNum).zfill(3) #TODO
     filePath += '.' + str(chunkNum) + '.hdf5'
     
     return filePath
@@ -96,24 +96,24 @@ def loadHeader(basePath,snapNum):
     return header
     
 def load(basePath,snapNum):
-    """ Load complete group catalog at once. """
+    """ Load complete group catalog all at once. """
     r = {}
     r['subhalos'] = loadSubhalos(basePath,snapNum)
     r['halos']    = loadHalos(basePath,snapNum)
     r['header']   = loadHeader(basePath,snapNum)
     return r
     
-def loadSingle(basePath,snapNum,haloID=None,subhaloID=None):
+def loadSingle(basePath,snapNum,haloID=-1,subhaloID=-1):
     """ Return complete group catalog information for one halo or subhalo. """
 
-    if (not haloID and not subhaloID) or (haloID and subhaloID):
+    if (haloID < 0 and subhaloID < 0) or (haloID >= 0 and subhaloID >= 0):
         raise Exception("Must specify either haloID or subhaloID (and not both).")
         
-    gName = "Subhalo" if subhaloID else "Group"
-    searchID = subhaloID if subhaloID else haloID
+    gName = "Subhalo" if subhaloID >= 0 else "Group"
+    searchID = subhaloID if subhaloID >= 0 else haloID
  
     # load groupcat offsets, calculate target file and offset
-    with h5py.File(gcPath(fileBase,snapNum),'r') as f:
+    with h5py.File(gcPath(basePath,snapNum),'r') as f:
         offsets = f['Header'].attrs['FileOffsets_'+gName]
  
     offsets = searchID - offsets
@@ -123,7 +123,7 @@ def loadSingle(basePath,snapNum,haloID=None,subhaloID=None):
     # load halo/subhalo fields into a dict
     result = {}
     
-    with h5py.File(gcPath(fileBase,snapNum,fileNum),'r'):
+    with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
         for haloProp in f[gName].keys():
             result[haloProp] = f[gName][haloProp][groupOffset]
             
