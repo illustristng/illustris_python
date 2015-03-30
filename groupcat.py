@@ -6,8 +6,8 @@ import h5py
 
 def gcPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a group catalog HDF5 file (modify as needed). """
-    gcPath = basePath + '/postprocessing/groups_new2/groups_' + str(snapNum).zfill(3) + '/'
-    filePath = gcPath + 'groups_' + str(snapNum).zfill(3) #TODO
+    gcPath = basePath + '/groups_' + str(snapNum).zfill(3) + '/'
+    filePath = gcPath + 'groups_' + str(snapNum).zfill(3)
     filePath += '.' + str(chunkNum) + '.hdf5'
     
     return filePath
