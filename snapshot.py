@@ -24,7 +24,7 @@ def getNumPart(header):
         
     return nPart    
     
-def loadSubset(basePath,snapNum,partType,fields=None,subset=None):
+def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
     """ Load a subset of fields for all particles/cells of a given partType.
         If offset and length specified, load only that subset of the partType. """
     result = {}
@@ -70,7 +70,7 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None):
         if not fields:
             fields = f[gName].keys()
         
-        for field in fields:                
+        for i, field in enumerate(fields):                
             # verify existence
             if not field in f[gName].keys():
                 raise Exception("Particle type ["+str(ptNum)+"] does not have field ["+field+"]")
@@ -79,7 +79,13 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None):
             shape = list(f[gName][field].shape)
             shape[0] = numToRead
             
-            #print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype
+            # multi-dimensional index slice load
+            if mdi is not None and mdi[i] is not None:
+                if len(shape) != 2:
+                    raise Exception("Read error: mdi requested on non-2D field ["+field+"]")
+                shape = [shape[0]]
+
+            #print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype,'shape',shape
         
             # allocate within return dict
             result[field] = np.zeros( shape, dtype=f[gName][field].dtype )
@@ -110,9 +116,12 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None):
         #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal)
         
         # loop over each requested field for this particle type
-        for field in fields:
+        for i, field in enumerate(fields):
             # read data local to the current file
-            result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
+            if mdi is None or mdi[i] is None:
+                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
+            else:
+                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal,mdi[i]]
         
         wOffset   += numToReadLocal
         numToRead -= numToReadLocal
