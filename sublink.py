@@ -5,39 +5,62 @@ import numpy as np
 import h5py
 import glob
 
-from groupcat import gcPath
+from groupcat import gcPath, offsetPath
 from util import partTypeNum
+from os.path import isfile
 
-def treePath(basePath,chunkNum=0):
+def treePath(basePath, treeName, chunkNum=0):
     """ Return absolute path to a SubLink HDF5 file (modify as needed). """
-    filePath = basePath + '/trees/SubLink/' + 'tree_extended.' + str(chunkNum) + '.hdf5'
+    filePath = '/trees/' + treeName + '/' + 'tree_extended.' + str(chunkNum) + '.hdf5'
+
+    if not isfile(basePath+filePath):
+        # new path scheme
+        filePath = '/../postprocessing/trees/' + treeName + '/tree_extended.' + str(chunkNum) + '.hdf5'
     
-    return filePath
+    return basePath+filePath
     
-def treeOffsets(basePath, snapNum, id):
+def treeOffsets(basePath, snapNum, id, treeName):
     """ Handle offset loading for a SubLink merger tree cutout. """
-    # load groupcat chunk offsets from header of first file
-    with h5py.File(gcPath(basePath,snapNum),'r') as f:
-        groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
-    
+    # old or new format
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        # load groupcat chunk offsets from separate 'offsets_nnn.hdf5' files
+        with h5py.File(offsetPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['FileOffsets/Subhalo'][()]
+    else:
+        # load groupcat chunk offsets from header of first file
+        with h5py.File(gcPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
+
     # calculate target groups file chunk which contains this id
     groupFileOffsets = int(id) - groupFileOffsets
     fileNum = np.max( np.where(groupFileOffsets >= 0) )
     groupOffset = groupFileOffsets[fileNum]
     
-    with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
+    # old or new format
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        offsetFile = offsetPath(basePath,snapNum)
+        prefix = 'Subhalo/' + treeName + '/'
+    else:
+        offsetFile = gcPath(basePath,snapNum,fileNum)
+        prefix = 'Offsets/Subhalo_Sublink'
+
+    with h5py.File(offsetFile,'r') as f:
         # load the merger tree offsets of this subgroup
-        RowNum     = f['Offsets']['Subhalo_SublinkRowNum'][groupOffset]
-        LastProgID = f['Offsets']['Subhalo_SublinkLastProgenitorID'][groupOffset]
-        SubhaloID  = f['Offsets']['Subhalo_SublinkSubhaloID'][groupOffset]
+        RowNum     = f[prefix+'RowNum'][groupOffset]
+        LastProgID = f[prefix+'LastProgenitorID'][groupOffset]
+        SubhaloID  = f[prefix+'SubhaloID'][groupOffset]
         return RowNum,LastProgID,SubhaloID
-        
-def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
+
+def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLink"):
     """ Load portion of Sublink tree, for a given subhalo, in its existing flat format.
         (optionally restricted to a subset fields). """
     # the tree is all subhalos between SubhaloID and LastProgenitorID
-    RowNum,LastProgID,SubhaloID = treeOffsets(basePath, snapNum, id)
+    RowNum,LastProgID,SubhaloID = treeOffsets(basePath, snapNum, id, treeName)
     
+    if RowNum == -1:
+        print('Warning, empty return. Subhalo [%d] at snapNum [%d] not in tree.' % (id,snapNum))
+        return None
+
     rowStart = RowNum
     rowEnd   = RowNum + (LastProgID - SubhaloID)
     nRows    = rowEnd - rowStart + 1
@@ -48,21 +71,22 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     
     # create quick offset table for rows in the SubLink files
     # if you are loading thousands or millions of sub-trees, you may wish to cache this offsets array
-    numTreeFiles = len(glob.glob(treePath(basePath,'*')))
+    numTreeFiles = len(glob.glob(treePath(basePath,treeName,'*')))
     offsets = np.zeros( numTreeFiles, dtype='int64' )
-    
+
     for i in range(numTreeFiles-1):
-        with h5py.File(treePath(basePath,i),'r') as f:
+        with h5py.File(treePath(basePath,treeName,i),'r') as f:
             offsets[i+1] = offsets[i] + f['SubhaloID'].shape[0]
         
     # find the tree file chunk containing this row
     rowOffsets = rowStart - offsets
+
     fileNum = np.max(np.where( rowOffsets >= 0 ))
     fileOff = rowOffsets[fileNum]
     
     # load only main progenitor branch? in this case, get MainLeafProgenitorID now
     if onlyMPB:
-        with h5py.File(treePath(basePath,fileNum),'r') as f:
+        with h5py.File(treePath(basePath,treeName,fileNum),'r') as f:
             MainLeafProgenitorID = f['MainLeafProgenitorID'][fileOff]
             
         # re-calculate nRows
@@ -72,7 +96,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     # read
     result = {'count':nRows}
     
-    with h5py.File(treePath(basePath,fileNum),'r') as f:        
+    with h5py.File(treePath(basePath,treeName,fileNum),'r') as f:        
         # if no fields requested, return all fields
         if not fields:
             fields = f.keys()
