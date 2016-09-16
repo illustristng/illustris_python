@@ -4,31 +4,50 @@ lhalotree.py: File I/O related to the LHaloTree merger tree files. """
 import numpy as np
 import h5py
 
-from groupcat import gcPath
+from groupcat import gcPath, offsetPath
 from util import partTypeNum
+from os.path import isfile
 
 def treePath(basePath,chunkNum=0):
     """ Return absolute path to a LHaloTree HDF5 file (modify as needed). """
     filePath = basePath + '/trees/treedata/' + 'trees_sf1_135.' + str(chunkNum) + '.hdf5'
+
+    if not isfile(filePath):
+        # new path scheme
+        filePath = basePath + '/../postprocessing/trees/LHaloTree/trees_sf1_099.' + str(chunkNum) + '.hdf5'
     
     return filePath
     
 def treeOffsets(basePath, snapNum, id):
     """ Handle offset loading for a LHaloTree merger tree cutout. """
-    # load groupcat chunk offsets from header of first file
-    with h5py.File(gcPath(basePath,snapNum),'r') as f:
-        groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
-    
+    # load groupcat chunk offsets from header of first file (old or new format)
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        # load groupcat chunk offsets from separate 'offsets_nnn.hdf5' files
+        with h5py.File(offsetPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['FileOffsets/Subhalo'][()]
+    else:
+        # load groupcat chunk offsets from header of first file
+        with h5py.File(gcPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
+   
     # calculate target groups file chunk which contains this id
     groupFileOffsets = int(id) - groupFileOffsets
     fileNum = np.max( np.where(groupFileOffsets >= 0) )
     groupOffset = groupFileOffsets[fileNum]
     
-    with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
+    # old or new format
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        offsetFile = offsetPath(basePath,snapNum)
+        prefix = 'Subhalo/LHaloTree/'
+    else:
+        offsetFile = gcPath(basePath,snapNum,fileNum)
+        prefix = 'Offsets/Subhalo_LHaloTree'
+
+    with h5py.File(offsetFile,'r') as f:
         # load the merger tree offsets of this subgroup
-        TreeFile  = f['Offsets']['Subhalo_LHaloTreeFile'][groupOffset]
-        TreeIndex = f['Offsets']['Subhalo_LHaloTreeIndex'][groupOffset]
-        TreeNum   = f['Offsets']['Subhalo_LHaloTreeNum'][groupOffset]
+        TreeFile  = f[prefix+'File'][groupOffset]
+        TreeIndex = f[prefix+'Index'][groupOffset]
+        TreeNum   = f[prefix+'Num'][groupOffset]
         return TreeFile,TreeIndex,TreeNum
     
 def singleNodeFlat(conn, index, data_in, data_out, count, onlyMPB):
@@ -65,6 +84,10 @@ def recProgenitorFlat(conn, start_index, data_in, data_out, count, onlyMPB):
 def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     """ Load portion of LHaloTree, for a given subhalo, re-arranging into a flat format. """
     TreeFile,TreeIndex,TreeNum = treeOffsets(basePath, snapNum, id)
+
+    if TreeNum == -1:
+        print('Warning, empty return. Subhalo [%d] at snapNum [%d] not in tree.' % (id,snapNum))
+        return None
     
     # config
     gName  = 'Tree' + str(TreeNum) # group name containing this subhalo

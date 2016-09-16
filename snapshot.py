@@ -4,7 +4,7 @@ snapshot.py: File I/O related to the snapshot files. """
 import numpy as np
 import h5py
 from util import partTypeNum
-from groupcat import gcPath
+from groupcat import gcPath, offsetPath
 
 def snapPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
@@ -24,9 +24,14 @@ def getNumPart(header):
         
     return nPart    
     
-def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
+def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None,sq=True):
     """ Load a subset of fields for all particles/cells of a given partType.
-        If offset and length specified, load only that subset of the partType. """
+        If offset and length specified, load only that subset of the partType. 
+        If mdi is specified, must be a list of integers of the same length as fields, 
+        giving for each field the multi-dimensional index (on the second dimension) to load.
+          For example, fields=['Coordinates','Masses'] and mdi=[1,None] returns a 1D array 
+          of y-Coordinates only, together with Masses.
+        If sq is True, return a numpy array instead of a dict if len(fields)==1."""
     result = {}
     
     ptNum = partTypeNum(partType)
@@ -57,7 +62,7 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
         result['count'] = numToRead
         
         if not numToRead:
-            print 'warning: no particles of requested type, empty return.'
+            #print 'warning: no particles of requested type, empty return.'
             return result
             
         # find a chunk with this particle type
@@ -85,8 +90,6 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
                     raise Exception("Read error: mdi requested on non-2D field ["+field+"]")
                 shape = [shape[0]]
 
-            #print 'Load:',partType,field,numToRead,'of',nPart[ptNum],f[gName][field].dtype,'shape',shape
-        
             # allocate within return dict
             result[field] = np.zeros( shape, dtype=f[gName][field].dtype )
         
@@ -99,9 +102,9 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
         
         # no particles of requested type in this file chunk?
         if not gName in f:
-            if subset:
-                raise Exception('Read error: subset read should be contiguous.')
+            f.close()
             fileNum += 1
+            fileOff  = 0
             continue
         
         # set local read length for this file chunk, truncate to be within the local size
@@ -135,7 +138,7 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None):
         raise Exception("Read ["+str(wOffset)+"] particles, but was expecting ["+str(origNumToRead)+"]")
         
     # only a single field? then return the array instead of a single item dict
-    if len(fields) == 1:
+    if sq and len(fields) == 1:
         return result[fields[0]]
         
     return result
@@ -144,24 +147,34 @@ def getSnapOffsets(basePath,snapNum,id,type):
     """ Compute offsets within snapshot for a particular group/subgroup. """
     r = {}
     
-    # load groupcat chunk offsets from header of first file
-    with h5py.File(gcPath(basePath,snapNum),'r') as f:
-        groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
-
-        # load the offsets for the snapshot chunks
-        r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
+    # old or new format
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        # use separate 'offsets_nnn.hdf5' files
+        with h5py.File(offsetPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['FileOffsets/'+type][()]
+            r['snapOffsets'] = np.transpose(f['FileOffsets/SnapByType'][()]) # consistency
+    else:
+        # load groupcat chunk offsets from header of first file
+        with h5py.File(gcPath(basePath,snapNum),'r') as f:
+            groupFileOffsets = f['Header'].attrs['FileOffsets_'+type]
+            r['snapOffsets'] = f['Header'].attrs['FileOffsets_Snap']
     
     # calculate target groups file chunk which contains this id
     groupFileOffsets = int(id) - groupFileOffsets
     fileNum = np.max( np.where(groupFileOffsets >= 0) )
     groupOffset = groupFileOffsets[fileNum]
-    
+
     # load the length (by type) of this group/subgroup from the group catalog
     with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
         r['lenType'] = f[type][type+'LenType'][groupOffset,:]
         
-        # load the offset (by type) of this group/subgroup within the snapshot
-        r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset,:]
+    # old or new format: load the offset (by type) of this group/subgroup within the snapshot
+    if 'fof_subhalo' in gcPath(basePath,snapNum):
+        with h5py.File(offsetPath(basePath,snapNum),'r') as f:
+            r['offsetType'] = f[type+'/SnapByType'][groupOffset,:]
+    else:
+        with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
+            r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset,:]
     
     return r
         
