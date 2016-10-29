@@ -171,7 +171,7 @@ def getSnapOffsets(basePath,snapNum,id,type):
     # old or new format: load the offset (by type) of this group/subgroup within the snapshot
     if 'fof_subhalo' in gcPath(basePath,snapNum):
         with h5py.File(offsetPath(basePath,snapNum),'r') as f:
-            r['offsetType'] = f[type+'/SnapByType'][groupOffset,:]
+            r['offsetType'] = f[type+'/SnapByType'][id,:]
     else:
         with h5py.File(gcPath(basePath,snapNum,fileNum),'r') as f:
             r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset,:]
