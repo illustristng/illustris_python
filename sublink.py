@@ -26,21 +26,21 @@ def treeOffsets(basePath, snapNum, id, treeName):
         # load groupcat chunk offsets from separate 'offsets_nnn.hdf5' files
         with h5py.File(offsetPath(basePath,snapNum),'r') as f:
             groupFileOffsets = f['FileOffsets/Subhalo'][()]
+
+        offsetFile = offsetPath(basePath,snapNum)
+        prefix = 'Subhalo/' + treeName + '/'
+
+        groupOffset = id
     else:
         # load groupcat chunk offsets from header of first file
         with h5py.File(gcPath(basePath,snapNum),'r') as f:
             groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
 
-    # calculate target groups file chunk which contains this id
-    groupFileOffsets = int(id) - groupFileOffsets
-    fileNum = np.max( np.where(groupFileOffsets >= 0) )
-    groupOffset = groupFileOffsets[fileNum]
+        # calculate target groups file chunk which contains this id
+        groupFileOffsets = int(id) - groupFileOffsets
+        fileNum = np.max( np.where(groupFileOffsets >= 0) )
+        groupOffset = groupFileOffsets[fileNum]
     
-    # old or new format
-    if 'fof_subhalo' in gcPath(basePath,snapNum):
-        offsetFile = offsetPath(basePath,snapNum)
-        prefix = 'Subhalo/' + treeName + '/'
-    else:
         offsetFile = gcPath(basePath,snapNum,fileNum)
         prefix = 'Offsets/Subhalo_Sublink'
 
@@ -56,7 +56,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLin
         (optionally restricted to a subset fields). """
     # the tree is all subhalos between SubhaloID and LastProgenitorID
     RowNum,LastProgID,SubhaloID = treeOffsets(basePath, snapNum, id, treeName)
-    
+
     if RowNum == -1:
         print('Warning, empty return. Subhalo [%d] at snapNum [%d] not in tree.' % (id,snapNum))
         return None

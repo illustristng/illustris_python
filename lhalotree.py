@@ -25,21 +25,21 @@ def treeOffsets(basePath, snapNum, id):
         # load groupcat chunk offsets from separate 'offsets_nnn.hdf5' files
         with h5py.File(offsetPath(basePath,snapNum),'r') as f:
             groupFileOffsets = f['FileOffsets/Subhalo'][()]
+
+        offsetFile = offsetPath(basePath,snapNum)
+        prefix = 'Subhalo/LHaloTree/'
+
+        groupOffset = id
     else:
         # load groupcat chunk offsets from header of first file
         with h5py.File(gcPath(basePath,snapNum),'r') as f:
             groupFileOffsets = f['Header'].attrs['FileOffsets_Subhalo']
    
-    # calculate target groups file chunk which contains this id
-    groupFileOffsets = int(id) - groupFileOffsets
-    fileNum = np.max( np.where(groupFileOffsets >= 0) )
-    groupOffset = groupFileOffsets[fileNum]
+        # calculate target groups file chunk which contains this id
+        groupFileOffsets = int(id) - groupFileOffsets
+        fileNum = np.max( np.where(groupFileOffsets >= 0) )
+        groupOffset = groupFileOffsets[fileNum]
     
-    # old or new format
-    if 'fof_subhalo' in gcPath(basePath,snapNum):
-        offsetFile = offsetPath(basePath,snapNum)
-        prefix = 'Subhalo/LHaloTree/'
-    else:
         offsetFile = gcPath(basePath,snapNum,fileNum)
         prefix = 'Offsets/Subhalo_LHaloTree'
 
