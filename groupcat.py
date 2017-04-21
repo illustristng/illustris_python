@@ -1,5 +1,6 @@
 """ Illustris Simulation: Public Data Release.
 groupcat.py: File I/O related to the FoF and Subfind group catalogs. """
+from __future__ import print_function
 
 from os.path import isfile
 import numpy as np
@@ -36,7 +37,7 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
         result['count'] = f['Header'].attrs['N'+nName+'_Total']
         
         if not result['count']:
-            print 'warning: zero groups, empty return (snap='+str(snapNum)+').'
+            print('warning: zero groups, empty return (snap='+str(snapNum)+').')
             return result
         
         # if fields not specified, load everything

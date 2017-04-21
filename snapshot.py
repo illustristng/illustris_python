@@ -1,5 +1,6 @@
 """ Illustris Simulation: Public Data Release.
 snapshot.py: File I/O related to the snapshot files. """
+from __future__ import print_function
 
 import numpy as np
 import h5py
@@ -62,7 +63,7 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None,sq=Tru
         result['count'] = numToRead
         
         if not numToRead:
-            #print 'warning: no particles of requested type, empty return.'
+            #print('warning: no particles of requested type, empty return.')
             return result
             
         # find a chunk with this particle type
@@ -115,8 +116,8 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None,sq=Tru
         if fileOff + numToReadLocal > numTypeLocal:
             numToReadLocal = numTypeLocal - fileOff
         
-        #print '['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
-        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal)
+        #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
+        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
         
         # loop over each requested field for this particle type
         for i, field in enumerate(fields):
