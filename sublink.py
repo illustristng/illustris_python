@@ -4,6 +4,7 @@ sublink.py: File I/O related to the Sublink merger tree files. """
 import numpy as np
 import h5py
 import glob
+import six
 
 from groupcat import gcPath, offsetPath
 from util import partTypeNum
@@ -66,7 +67,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLin
     nRows    = rowEnd - rowStart + 1
     
     # make sure fields is not a single element
-    if isinstance(fields, basestring):
+    if isinstance(fields, six.string_types):
         fields = [fields]
     
     # create quick offset table for rows in the SubLink files
