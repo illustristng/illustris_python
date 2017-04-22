@@ -3,6 +3,7 @@ lhalotree.py: File I/O related to the LHaloTree merger tree files. """
 
 import numpy as np
 import h5py
+import six
 
 from groupcat import gcPath, offsetPath
 from util import partTypeNum
@@ -94,7 +95,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
     nRows  = None # we do not know in advance the size of the tree
     
     # make sure fields is not a single element
-    if isinstance(fields, basestring):
+    if isinstance(fields, six.string_types):
         fields = [fields]
     
     fTree = h5py.File(treePath(basePath,TreeFile),'r')

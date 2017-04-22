@@ -2,6 +2,7 @@
 groupcat.py: File I/O related to the FoF and Subfind group catalogs. """
 from __future__ import print_function
 
+import six
 from os.path import isfile
 import numpy as np
 import h5py
@@ -27,7 +28,7 @@ def loadObjects(basePath,snapNum,gName,nName,fields):
     result = {}
     
     # make sure fields is not a single element
-    if isinstance(fields, basestring):
+    if isinstance(fields, six.string_types):
         fields = [fields]
     
     # load header from first chunk
