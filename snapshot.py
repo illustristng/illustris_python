@@ -4,8 +4,12 @@ from __future__ import print_function
 
 import numpy as np
 import h5py
+# python2-3 compatibility
+import six
 from util import partTypeNum
 from groupcat import gcPath, offsetPath
+
+
 
 def snapPath(basePath,snapNum,chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
@@ -39,7 +43,7 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None,sq=Tru
     gName = "PartType" + str(ptNum)
     
     # make sure fields is not a single element
-    if isinstance(fields, basestring):
+    if isinstance(fields, six.string_types):
         fields = [fields]
     
     # load header from first chunk
@@ -74,7 +78,9 @@ def loadSubset(basePath,snapNum,partType,fields=None,subset=None,mdi=None,sq=Tru
             
         # if fields not specified, load everything
         if not fields:
-            fields = f[gName].keys()
+            # LZK; in python3 this needs to be cast to list so that it isn't lost when `f` goes out
+            #      of scope.
+            fields = list(f[gName].keys())
         
         for i, field in enumerate(fields):                
             # verify existence
