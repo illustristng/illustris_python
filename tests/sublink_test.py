@@ -10,7 +10,10 @@ Alternatively, `nosetests` can be run and it will find the tests:
     `$ nosetests [-v] [--nocapture]`
 
 To run particular tests (for example),
-    `$ nosetests tests/sublink_test.py:test_snapshot_partTypeNum_1`
+    `$ nosetests tests/sublink_test.py:test_loadTree`
+
+To include coverage information,
+    `$ nosetests --with-coverage --cover-package=.`
 
 """
 import os

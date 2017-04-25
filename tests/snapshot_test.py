@@ -12,6 +12,9 @@ Alternatively, `nosetests` can be run and it will find the tests:
 To run particular tests (for example),
     `$ nosetests tests/snapshot_test.py:test_snapshot_partTypeNum_1`
 
+To include coverage information,
+    `$ nosetests --with-coverage --cover-package=.`
+
 """
 import numpy as np
 from nose.tools import assert_equal, assert_raises, assert_true
