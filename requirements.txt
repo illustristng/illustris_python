@@ -1,0 +1,8 @@
+# Packages required for basic usage of `illustris_python` package
+numpy
+h5py
+six
+
+# Packages required for unit tests
+nose
+coverage
