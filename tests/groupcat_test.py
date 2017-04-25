@@ -1,16 +1,16 @@
-"""Tests for the `illustris_python` module.
+"""Tests for the `illustris_python.groupcat` submodule.
 
 Running Tests
 -------------
 To run all tests, this script can be executed as:
-    `$ python tests/test.py [-v] [--nocapture]`
+    `$ python tests/groupcat_test.py [-v] [--nocapture]`
 from the root directory.
 
 Alternatively, `nosetests` can be run and it will find the tests:
     `$ nosetests [-v] [--nocapture]`
 
 To run particular tests (for example),
-    `$ nosetests tests/test.py:test_groupcat_loadSubhalos`
+    `$ nosetests tests/groupcat_test.py:test_groupcat_loadSubhalos`
 
 """
 
