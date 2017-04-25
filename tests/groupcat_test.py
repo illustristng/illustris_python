@@ -46,7 +46,8 @@ def test_groupcat_loadHalos_1():
     # Construct a path that should not be found: fail
     fail_path = os.path.join(BASE_PATH_ILLUSTRIS_1, 'failure')
     print("path '{}' should not be found".format(fail_path))
-    assert_raises(OSError, ill.groupcat.loadHalos, fail_path, snap, fields=fields)
+    # `OSError` is raised in python3 (but in py3 OSError == IOError), `IOError` in python2
+    assert_raises(IOError, ill.groupcat.loadHalos, fail_path, snap, fields=fields)
     return
 
 
@@ -55,7 +56,8 @@ def test_groupcat_loadHalos_2():
     snap = 136
     # Construct a path that should not be found: fail
     print("snap '{}' should not be found".format(snap))
-    assert_raises(OSError, ill.groupcat.loadHalos, BASE_PATH_ILLUSTRIS_1, snap, fields=fields)
+    # `OSError` is raised in python3 (but in py3 OSError == IOError), `IOError` in python2
+    assert_raises(IOError, ill.groupcat.loadHalos, BASE_PATH_ILLUSTRIS_1, snap, fields=fields)
     return
 
 
