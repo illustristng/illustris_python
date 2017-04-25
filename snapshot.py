@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import numpy as np
 import h5py
-# python2-3 compatibility
 import six
 from util import partTypeNum
 from groupcat import gcPath, offsetPath
