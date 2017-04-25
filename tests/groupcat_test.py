@@ -12,6 +12,9 @@ Alternatively, `nosetests` can be run and it will find the tests:
 To run particular tests (for example),
     `$ nosetests tests/groupcat_test.py:test_groupcat_loadSubhalos`
 
+To include coverage information,
+    `$ nosetests --with-coverage --cover-package=.`
+
 """
 
 import os
