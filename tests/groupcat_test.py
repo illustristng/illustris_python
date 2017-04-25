@@ -33,7 +33,7 @@ def test_groupcat_loadHalos():
     snap = 135
     group_first_sub = ill.groupcat.loadHalos(BASE_PATH_ILLUSTRIS_1, snap, fields=fields)
     print("group_first_sub.shape = ", group_first_sub.shape)
-    assert_true(group_first_sub.shape == (7713601,))
+    assert_equal(group_first_sub.shape, (7713601,))
     print("group_first_sub = ", group_first_sub)
     assert_true(np.all(group_first_sub[:3] == [0, 16937, 30430]))
 
