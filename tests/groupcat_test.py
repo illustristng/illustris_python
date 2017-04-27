@@ -31,7 +31,7 @@ from . import ill, BASE_PATH_ILLUSTRIS_1
 # =========================
 
 
-def test_groupcat_loadHalos():
+def test_groupcat_loadHalos_field():
     fields = ['GroupFirstSub']
     snap = 135
     group_first_sub = ill.groupcat.loadHalos(BASE_PATH_ILLUSTRIS_1, snap, fields=fields)
@@ -39,7 +39,25 @@ def test_groupcat_loadHalos():
     assert_equal(group_first_sub.shape, (7713601,))
     print("group_first_sub = ", group_first_sub)
     assert_true(np.all(group_first_sub[:3] == [0, 16937, 30430]))
+    return
 
+
+def test_groupcat_loadHalos_all_fields():
+    snap = 135
+    num_fields = 23
+    # Illustris-1, snap 135
+    cat_shape = (7713601,)
+    first_key = 'GroupBHMass'
+    all_fields = ill.groupcat.loadHalos(BASE_PATH_ILLUSTRIS_1, snap)
+    print("len(all_fields.keys()) = {} (should be {})".format(len(all_fields.keys()), num_fields))
+    assert_equal(len(all_fields.keys()), num_fields)
+    key = sorted(all_fields.keys())[0]
+    print("all_fields.keys()[0] = '{}' (should be '{}')".format(key, first_key))
+    assert_equal(key, first_key)
+    shape = np.shape(all_fields[key])
+    print("np.shape(all_fields[{}]) = {} (should be {})".format(
+        key, shape, cat_shape))
+    assert_equal(shape, cat_shape)
     return
 
 
