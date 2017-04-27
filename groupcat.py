@@ -38,20 +38,22 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
     with h5py.File(gcPath(basePath, snapNum), 'r') as f:
 
         header = dict(f['Header'].attrs.items())
-        result['count'] = f['Header'].attrs['N'+nName+'_Total']
+        result['count'] = f['Header'].attrs['N' + nName + '_Total']
 
         if not result['count']:
-            print('warning: zero groups, empty return (snap='+str(snapNum)+').')
+            print('warning: zero groups, empty return (snap=' + str(snapNum) + ').')
             return result
 
         # if fields not specified, load everything
         if not fields:
-            fields = f[gName].keys()
+            # LZK; in python3 this needs to be cast to list so that it isn't lost when `f` goes out
+            #      of scope.
+            fields = list(f[gName].keys())
 
         for field in fields:
             # verify existence
             if field not in f[gName].keys():
-                raise Exception("Group catalog does not have requested field ["+field+"]!")
+                raise Exception("Group catalog does not have requested field [" + field + "]!")
 
             # replace local length with global
             shape = list(f[gName][field].shape)
@@ -71,6 +73,9 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
 
         # loop over each requested field
         for field in fields:
+            if field not in f[gName].keys():
+                raise Exception("Group catalog does not have requested field [" + field + "]!")
+
             # shape and type
             shape = f[gName][field].shape
 
