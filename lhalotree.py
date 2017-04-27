@@ -106,7 +106,9 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False):
 
     # if no fields requested, return everything
     if not fields:
-        fields = fTree[gName].keys()
+        # LZK; in python3 this needs to be cast to list so that it isn't lost when `f` goes out
+        #      of scope.
+        fields = list(fTree[gName].keys())
 
     # verify existence of requested fields
     for field in fields:

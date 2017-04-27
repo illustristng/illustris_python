@@ -123,7 +123,9 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLin
     with h5py.File(treePath(basePath, treeName, fileNum), 'r') as f:
         # if no fields requested, return all fields
         if not fields:
-            fields = f.keys()
+            # LZK; in python3 this needs to be cast to list so that it isn't lost when `f` goes out
+            #      of scope.
+            fields = list(f.keys())
 
         if fileOff + nRows > f['SubfindID'].shape[0]:
             raise Exception('Should not occur. Each tree is contained within a single file.')
