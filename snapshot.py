@@ -77,8 +77,6 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
 
         # if fields not specified, load everything
         if not fields:
-            # LZK; in python3 this needs to be cast to list so that it isn't lost when `f` goes out
-            #      of scope.
             fields = list(f[gName].keys())
 
         for i, field in enumerate(fields):
