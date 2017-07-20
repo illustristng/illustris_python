@@ -65,10 +65,38 @@ def treeOffsets(basePath, snapNum, id, treeName):
         SubhaloID  = f[prefix+'SubhaloID'][groupOffset]
         return RowNum, LastProgID, SubhaloID
 
+offsetCache = dict()
 
-def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLink"):
+def subLinkOffsets(basePath, treeName, cache=True):
+    # create quick offset table for rows in the SubLink files
+    if cache is True:
+        cache = offsetCache
+
+    if type(cache) is dict:
+        path = os.path.join(basePath, treeName)
+        try:
+            return cache[path]
+        except KeyError:
+            pass
+
+    search_path = treePath(basePath, treeName, '*')
+    numTreeFiles = len(glob.glob(search_path))
+    if numTreeFiles == 0:
+        raise ValueError("No tree files found! for path '{}'".format(search_path))
+    offsets = np.zeros(numTreeFiles, dtype='int64')
+
+    for i in range(numTreeFiles-1):
+        with h5py.File(treePath(basePath, treeName, i), 'r') as f:
+            offsets[i+1] = offsets[i] + f['SubhaloID'].shape[0]
+
+    if type(cache) is dict:
+        cache[path] = offsets
+
+    return offsets
+
+def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLink", cache=True):
     """ Load portion of Sublink tree, for a given subhalo, in its existing flat format.
-        (optionally restricted to a subset fields). """
+        (optionally restricted to a subset fields)."""
     # the tree is all subhalos between SubhaloID and LastProgenitorID
     RowNum, LastProgID, SubhaloID = treeOffsets(basePath, snapNum, id, treeName)
 
@@ -84,17 +112,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLin
     if isinstance(fields, six.string_types):
         fields = [fields]
 
-    # create quick offset table for rows in the SubLink files
-    # if you are loading thousands or millions of sub-trees, may wish to cache this offsets array
-    search_path = treePath(basePath, treeName, '*')
-    numTreeFiles = len(glob.glob(search_path))
-    if numTreeFiles == 0:
-        raise ValueError("No tree files found! for path '{}'".format(search_path))
-    offsets = np.zeros(numTreeFiles, dtype='int64')
-
-    for i in range(numTreeFiles-1):
-        with h5py.File(treePath(basePath, treeName, i), 'r') as f:
-            offsets[i+1] = offsets[i] + f['SubhaloID'].shape[0]
+    offsets = subLinkOffsets(basePath, treeName, cache)
 
     # find the tree file chunk containing this row
     rowOffsets = rowStart - offsets
