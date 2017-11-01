@@ -21,7 +21,7 @@ def gcPath(basePath, snapNum, chunkNum=0):
 
 def offsetPath(basePath, snapNum):
     """ Return absolute path to a separate offset file (modify as needed). """
-    offsetPath = basePath + '../postprocessing/offsets/offsets_%03d.hdf5' % snapNum
+    offsetPath = basePath + '/../postprocessing/offsets/offsets_%03d.hdf5' % snapNum
 
     return offsetPath
 
