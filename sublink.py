@@ -7,8 +7,8 @@ import glob
 import six
 import os
 
-from groupcat import gcPath, offsetPath
-from util import partTypeNum
+from .groupcat import gcPath, offsetPath
+from .util import partTypeNum
 
 
 def treePath(basePath, treeName, chunkNum=0):
@@ -66,7 +66,7 @@ def treeOffsets(basePath, snapNum, id, treeName):
         return RowNum, LastProgID, SubhaloID
 
 
-def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLink"):
+def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, onlyMDB=False, treeName="SubLink"):
     """ Load portion of Sublink tree, for a given subhalo, in its existing flat format.
         (optionally restricted to a subset fields). """
     # the tree is all subhalos between SubhaloID and LastProgenitorID
@@ -116,6 +116,17 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, treeName="SubLin
         # re-calculate nRows
         rowEnd = RowNum + (MainLeafProgenitorID - SubhaloID)
         nRows  = rowEnd - rowStart + 1
+
+    # load only main descendant branch (e.g. from z=0 descendant to current subhalo)
+    if onlyMDB:
+        with h5py.File(treePath(basePath, treeName, fileNum),'r') as f:
+            RootDescendantID = f['RootDescendantID'][fileOff]
+
+        # re-calculate tree subset
+        rowStart = RowNum - (SubhaloID - RootDescendantID)
+        rowEnd   = RowNum
+        nRows    = rowEnd - rowStart + 1
+        fileOff -= nRows
 
     # read
     result = {'count': nRows}

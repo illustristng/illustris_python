@@ -5,7 +5,7 @@ import numpy as np
 import h5py
 import six
 
-from groupcat import gcPath, offsetPath
+from .groupcat import gcPath, offsetPath
 from os.path import isfile
 
 
