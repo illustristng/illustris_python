@@ -5,8 +5,8 @@ from __future__ import print_function
 import numpy as np
 import h5py
 import six
-from util import partTypeNum
-from groupcat import gcPath, offsetPath
+from .util import partTypeNum
+from .groupcat import gcPath, offsetPath
 
 
 def snapPath(basePath, snapNum, chunkNum=0):
@@ -28,14 +28,15 @@ def getNumPart(header):
     return nPart
 
 
-def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, sq=True):
+def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
     """ Load a subset of fields for all particles/cells of a given partType.
         If offset and length specified, load only that subset of the partType.
         If mdi is specified, must be a list of integers of the same length as fields,
         giving for each field the multi-dimensional index (on the second dimension) to load.
           For example, fields=['Coordinates', 'Masses'] and mdi=[1, None] returns a 1D array
           of y-Coordinates only, together with Masses.
-        If sq is True, return a numpy array instead of a dict if len(fields)==1."""
+        If sq is True, return a numpy array instead of a dict if len(fields)==1.
+        If float32 is True, load any float64 datatype arrays directly as float32 (save memory). """
     result = {}
 
     ptNum = partTypeNum(partType)
@@ -95,7 +96,9 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
                 shape = [shape[0]]
 
             # allocate within return dict
-            result[field] = np.zeros(shape, dtype=f[gName][field].dtype)
+            dtype = f[gName][field].dtype
+            if dtype == np.float64 and float32: dtype = np.float32
+            result[field] = np.zeros(shape, dtype=dtype)
 
     # loop over chunks
     wOffset = 0
@@ -119,8 +122,8 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
         if fileOff + numToReadLocal > numTypeLocal:
             numToReadLocal = numTypeLocal - fileOff
 
-        # print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
-        #       '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
+        #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
+        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
 
         # loop over each requested field for this particle type
         for i, field in enumerate(fields):
