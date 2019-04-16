@@ -141,7 +141,7 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, onlyMDB=False, t
             RootDescendantID = f['RootDescendantID'][fileOff]
 
         # re-calculate tree subset
-        rowStart = RowNum - (SubhaloID - RootDescendantID)
+        rowStart = RowNum - (SubhaloID - RootDescendantID) + 1
         rowEnd   = RowNum
         nRows    = rowEnd - rowStart + 1
         fileOff -= nRows
