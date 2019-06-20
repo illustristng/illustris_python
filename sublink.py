@@ -36,7 +36,7 @@ def treePath(basePath, treeName, chunkNum=0):
 def treeOffsets(basePath, snapNum, id, treeName):
     """ Handle offset loading for a SubLink merger tree cutout. """
     # old or new format
-    if 'fof_subhalo' in gcPath(basePath, snapNum):
+    if 'fof_subhalo' in gcPath(basePath, snapNum) or treeName == "SubLink_gal":
         # load groupcat chunk offsets from separate 'offsets_nnn.hdf5' files
         with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
             groupFileOffsets = f['FileOffsets/Subhalo'][()]
