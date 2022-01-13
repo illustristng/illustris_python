@@ -70,10 +70,10 @@ def test_loadHalo():
     coords = [[19484.6576131, 20662.6423522],
               [54581.7254122, 55598.2078751],
               [60272.0348192, 61453.9991835]]
-    num_star_keys = 15
+    stars_count = 981545
 
     stars = ill.snapshot.loadHalo(BASE_PATH_ILLUSTRIS_1, snap, halo_num, 'stars')
-    assert_equal(len(stars.keys()), num_star_keys)
+    assert_equal(stars["count"], stars_count)
     for i in range(3):
         _min = np.min(stars['Coordinates'][:, i])
         _max = np.max(stars['Coordinates'][:, i])
