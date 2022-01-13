@@ -3,7 +3,7 @@ groupcat.py: File I/O related to the FoF and Subfind group catalogs. """
 from __future__ import print_function
 
 import six
-from os.path import isfile
+from os.path import isfile,expanduser
 import numpy as np
 import h5py
 
@@ -14,7 +14,7 @@ def gcPath(basePath, snapNum, chunkNum=0):
     filePath1 = gcPath + 'groups_%03d.%d.hdf5' % (snapNum, chunkNum)
     filePath2 = gcPath + 'fof_subhalo_tab_%03d.%d.hdf5' % (snapNum, chunkNum)
 
-    if isfile(filePath1):
+    if isfile(expanduser(filePath1)):
         return filePath1
     return filePath2
 
