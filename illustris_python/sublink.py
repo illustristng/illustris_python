@@ -106,7 +106,6 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, onlyMDB=False, t
 
     rowStart = RowNum
     rowEnd   = RowNum + (LastProgID - SubhaloID)
-    nRows    = rowEnd - rowStart + 1
 
     # make sure fields is not a single element
     if isinstance(fields, six.string_types):
@@ -131,20 +130,23 @@ def loadTree(basePath, snapNum, id, fields=None, onlyMPB=False, onlyMDB=False, t
         with h5py.File(treePath(basePath, treeName, fileNum), 'r') as f:
             MainLeafProgenitorID = f['MainLeafProgenitorID'][fileOff]
 
-        # re-calculate nRows
+        # re-calculate rowEnd
         rowEnd = RowNum + (MainLeafProgenitorID - SubhaloID)
-        nRows  = rowEnd - rowStart + 1
 
     # load only main descendant branch (e.g. from z=0 descendant to current subhalo)
     if onlyMDB:
         with h5py.File(treePath(basePath, treeName, fileNum),'r') as f:
             RootDescendantID = f['RootDescendantID'][fileOff]
 
-        # re-calculate tree subset
+        # re-calculate tree subset (rowStart), either single branch to root descendant, or 
+        # subset of tree ending at this subhalo if this subhalo is not on the MPB of that 
+        # root descendant
         rowStart = RowNum - (SubhaloID - RootDescendantID) + 1
-        rowEnd   = RowNum
-        nRows    = rowEnd - rowStart + 1
-        fileOff -= nRows
+        rowEnd   = RowNum + 1
+        fileOff -= (rowEnd - rowStart)
+
+    # calculate number of rows to load
+    nRows = rowEnd - rowStart + 1
 
     # read
     result = {'count': nRows}
