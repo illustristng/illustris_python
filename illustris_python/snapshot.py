@@ -5,6 +5,8 @@ from __future__ import print_function
 import numpy as np
 import h5py
 import six
+from os.path import isfile
+
 from .util import partTypeNum
 from .groupcat import gcPath, offsetPath
 
@@ -12,10 +14,12 @@ from .groupcat import gcPath, offsetPath
 def snapPath(basePath, snapNum, chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
     snapPath = basePath + '/snapdir_' + str(snapNum).zfill(3) + '/'
-    filePath = snapPath + 'snap_' + str(snapNum).zfill(3)
-    filePath += '.' + str(chunkNum) + '.hdf5'
-    return filePath
+    filePath1 = snapPath + 'snap_' + str(snapNum).zfill(3) + '.' + str(chunkNum) + '.hdf5'
+    filePath2 = filePath1.replace('/snap_', '/snapshot_')
 
+    if isfile(filePath1):
+        return filePath1
+    return filePath2
 
 def getNumPart(header):
     """ Calculate number of particles of all types given a snapshot header. """
