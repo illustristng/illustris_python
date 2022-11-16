@@ -38,6 +38,10 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
     with h5py.File(gcPath(basePath, snapNum), 'r') as f:
 
         header = dict(f['Header'].attrs.items())
+
+        if 'N'+nName+'_Total' not in header and nName == 'subgroups':
+            nName = 'subhalos' # alternate convention
+
         result['count'] = f['Header'].attrs['N' + nName + '_Total']
 
         if not result['count']:
