@@ -11,13 +11,17 @@ from os.path import isfile
 
 def treePath(basePath, chunkNum=0):
     """ Return absolute path to a LHaloTree HDF5 file (modify as needed). """
-    filePath = basePath + '/trees/treedata/' + 'trees_sf1_135.' + str(chunkNum) + '.hdf5'
 
-    if not isfile(filePath):
-        # new path scheme
-        filePath = basePath + '/../postprocessing/trees/LHaloTree/trees_sf1_099.' + str(chunkNum) + '.hdf5'
+    filePath_list = [ basePath + '/trees/treedata/' + 'trees_sf1_135.' + str(chunkNum) + '.hdf5',
+                      basePath + '/../postprocessing/trees/LHaloTree/trees_sf1_099.' + str(chunkNum) + '.hdf5', #new path scheme for TNG
+                      basePath + '/../postprocessing/trees/LHaloTree/trees_sf1_080.' + str(chunkNum) + '.hdf5', #Thesan
+                    ]
 
-    return filePath
+    for filePath in filePath_list:
+        if isfile(filePath):
+            return filePath
+
+    raise ValueError("No tree file found!")
 
 
 def treeOffsets(basePath, snapNum, id):
