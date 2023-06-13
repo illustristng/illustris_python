@@ -1,5 +1,5 @@
 """ Illustris Simulation: Public Data Release.
-snapshot.py: File I/O related to the snapshot files. """
+cartesian.py: File I/O related to the cartesian output files (THESAN only). """
 from __future__ import print_function
 
 import numpy as np
