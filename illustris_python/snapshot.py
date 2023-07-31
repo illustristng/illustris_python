@@ -158,7 +158,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
     return result
 
 
-def getSnapOffsets(basePath, snapNum, id, type):
+def getSnapOffsets(basePath, snapNum, id, type, TNGClusterFuzz=False):
     """ Compute offsets within snapshot for a particular group/subgroup. """
     r = {}
 
@@ -220,7 +220,7 @@ def loadHaloFuzz(basePath, snapNum, id, partType, fields=None):
     """ Load all particles/cells of one type for a specific halo                                                                    
         zoom region from the TNG-Cluster zoom-ins                                                                                   
         (optionally restricted to a subset fields). """
-    # load fuzz length, compute offset, call loadSubset                                                                             
+    # load fuzz length, compute offset, call loadSubset                                                                     
     subset = getSnapOffsets(basePath, snapNum, id, "Group", TNGClusterFuzz=True)
     return loadSubset(basePath, snapNum, partType, fields, subset=subset)
 
