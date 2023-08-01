@@ -8,7 +8,7 @@ import six
 from os.path import isfile
 
 from .util import partTypeNum
-from .groupcat import gcPath, offsetPath
+from .groupcat import gcPath, offsetPath, loadSingle
 
 
 def snapPath(basePath, snapNum, chunkNum=0):
@@ -158,7 +158,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
     return result
 
 
-def getSnapOffsets(basePath, snapNum, id, type, TNGClusterFuzz=False):
+def getSnapOffsets(basePath, snapNum, id, type):
     """ Compute offsets within snapshot for a particular group/subgroup. """
     r = {}
 
@@ -179,12 +179,6 @@ def getSnapOffsets(basePath, snapNum, id, type, TNGClusterFuzz=False):
     fileNum = np.max(np.where(groupFileOffsets >= 0))
     groupOffset = groupFileOffsets[fileNum]
 
-    if TNGClusterFuzz:
-        with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
-            r['lenType'] = f['OriginalZooms/OuterFuzzTotalLengthByType'][groupOffset, :]
-            r['offsetType'] = f['OriginalZooms/OuterFuzzSnapOffsetByType'][groupOffset, :]
-            return r
-
     # load the length (by type) of this group/subgroup from the group catalog
     with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
         r['lenType'] = f[type][type+'LenType'][groupOffset, :]
@@ -193,6 +187,11 @@ def getSnapOffsets(basePath, snapNum, id, type, TNGClusterFuzz=False):
     if 'fof_subhalo' in gcPath(basePath, snapNum):
         with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
             r['offsetType'] = f[type+'/SnapByType'][id, :]
+
+            # add TNG-Cluster specific offsets if present
+            if 'OriginalZooms' in f:
+                for key in f['OriginalZooms']:
+                    r[key] = f['OriginalZooms'][key][()] 
     else:
         with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
             r['offsetType'] = f['Offsets'][type+'_SnapByType'][groupOffset, :]
@@ -216,11 +215,37 @@ def loadHalo(basePath, snapNum, id, partType, fields=None):
     return loadSubset(basePath, snapNum, partType, fields, subset=subset)
 
 
-def loadHaloFuzz(basePath, snapNum, id, partType, fields=None):
-    """ Load all particles/cells of one type for a specific halo                                                                    
-        zoom region from the TNG-Cluster zoom-ins                                                                                   
+def loadOriginalZoom(basePath, snapNum, id, partType, fields=None):
+    """ Load all particles/cells of one type corresponding to an
+        original (entire) zoom simulation. TNG-Cluster specific.
         (optionally restricted to a subset fields). """
     # load fuzz length, compute offset, call loadSubset                                                                     
-    subset = getSnapOffsets(basePath, snapNum, id, "Group", TNGClusterFuzz=True)
-    return loadSubset(basePath, snapNum, partType, fields, subset=subset)
+    subset = getSnapOffsets(basePath, snapNum, id, "Group")
+
+    # identify original halo ID and corresponding index
+    halo = loadSingle(basePath, snapNum, haloID=id)
+    assert 'GroupOrigHaloID' in halo, 'Error: loadOriginalZoom() only for the TNG-Cluster simulation.'
+    orig_index = np.where(subset['HaloIDs'] == halo['GroupOrigHaloID'])[0][0]
+
+    # (1) load all FoF particles/cells
+    subset['lenType'] = subset['GroupsTotalLengthByType'][orig_index, :]
+    subset['offsetType'] = subset['GroupsSnapOffsetByType'][orig_index, :]
+
+    data1 = loadSubset(basePath, snapNum, partType, fields, subset=subset)
+
+    # (2) load all non-FoF particles/cells
+    subset['lenType'] = subset['OuterFuzzTotalLengthByType'][orig_index, :]
+    subset['offsetType'] = subset['OuterFuzzSnapOffsetByType'][orig_index, :]
+
+    data2 = loadSubset(basePath, snapNum, partType, fields, subset=subset)
+
+    # combine and return
+    if isinstance(data1, np.ndarray):
+        return np.concatenate((data1,data2), axis=0)
+    
+    data = {'count':data1['count']+data2['count']}
+    for key in data1.keys():
+        if key == 'count': continue
+        data[key] = np.concatenate((data1[key],data2[key]), axis=0)
+    return data
 
