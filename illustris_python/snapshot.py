@@ -158,7 +158,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
     return result
 
 
-def getSnapOffsets(basePath, snapNum, id, type):
+def getSnapOffsets(basePath, snapNum, id, type, TNGClusterFuzz=False):
     """ Compute offsets within snapshot for a particular group/subgroup. """
     r = {}
 
@@ -178,6 +178,12 @@ def getSnapOffsets(basePath, snapNum, id, type):
     groupFileOffsets = int(id) - groupFileOffsets
     fileNum = np.max(np.where(groupFileOffsets >= 0))
     groupOffset = groupFileOffsets[fileNum]
+
+    if TNGClusterFuzz:
+        with h5py.File(offsetPath(basePath, snapNum), 'r') as f:
+            r['lenType'] = f['OriginalZooms/OuterFuzzTotalLengthByType'][groupOffset, :]
+            r['offsetType'] = f['OriginalZooms/OuterFuzzSnapOffsetByType'][groupOffset, :]
+            return r
 
     # load the length (by type) of this group/subgroup from the group catalog
     with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
@@ -208,3 +214,13 @@ def loadHalo(basePath, snapNum, id, partType, fields=None):
     # load halo length, compute offset, call loadSubset
     subset = getSnapOffsets(basePath, snapNum, id, "Group")
     return loadSubset(basePath, snapNum, partType, fields, subset=subset)
+
+
+def loadHaloFuzz(basePath, snapNum, id, partType, fields=None):
+    """ Load all particles/cells of one type for a specific halo                                                                    
+        zoom region from the TNG-Cluster zoom-ins                                                                                   
+        (optionally restricted to a subset fields). """
+    # load fuzz length, compute offset, call loadSubset                                                                     
+    subset = getSnapOffsets(basePath, snapNum, id, "Group", TNGClusterFuzz=True)
+    return loadSubset(basePath, snapNum, partType, fields, subset=subset)
+
