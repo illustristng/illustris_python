@@ -184,8 +184,10 @@ def maxPastMass(tree, index, partType='stars'):
     return np.max(masses)
 
 
-def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0):
-    """ Calculate the number of mergers in this sub-tree (optionally above some mass ratio threshold). """
+def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0, alongFullTree=False):
+    """ Calculate the number of mergers, along the main progenitor branch, in this sub-tree 
+    (optionally above some mass ratio threshold). If alongFullTree, count across the full 
+    sub-tree and not only along the MPB. """
     # verify the input sub-tree has the required fields
     reqFields = ['SubhaloID', 'NextProgenitorID', 'MainLeafProgenitorID',
                  'FirstProgenitorID', 'SubhaloMassType']
@@ -193,7 +195,7 @@ def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0):
     if not set(reqFields).issubset(tree.keys()):
         raise Exception('Error: Input tree needs to have loaded fields: '+', '.join(reqFields))
 
-    numMergers   = 0
+    num = 0
     invMassRatio = 1.0 / minMassRatio
 
     # walk back main progenitor branch
@@ -216,10 +218,16 @@ def numMergers(tree, minMassRatio=1e-10, massPartType='stars', index=0):
                 ratio = npMass / fpMass
 
                 if ratio >= minMassRatio and ratio <= invMassRatio:
-                    numMergers += 1
+                    num += 1
 
             npID = tree['NextProgenitorID'][npIndex]
 
+            # count along full tree instead of just along the MPB? (non-standard)
+            if alongFullTree:
+                if tree['FirstProgenitorID'][npIndex] != -1:
+                    numSubtree = numMergers(tree, minMassRatio=minMassRatio, massPartType=massPartType, index=npIndex)
+                    num += numSubtree
+
         fpID = tree['FirstProgenitorID'][fpIndex]
 
-    return numMergers
+    return num
