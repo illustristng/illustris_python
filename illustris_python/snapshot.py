@@ -241,7 +241,16 @@ def loadOriginalZoom(basePath, snapNum, id, partType, fields=None):
 
     # combine and return
     if isinstance(data1, np.ndarray):
+        # protect against empty data
+        if isinstance(data2, dict):
+            return data1
         return np.concatenate((data1,data2), axis=0)
+    
+    # protect against empty data
+    if data1["count"] == 0:
+        return data2
+    elif data2["count"] == 0:
+        return data1
     
     data = {'count':data1['count']+data2['count']}
     for key in data1.keys():
