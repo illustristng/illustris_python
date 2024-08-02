@@ -127,7 +127,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
         numToReadLocal = numToRead
 
         if fileOff + numToReadLocal > numTypeLocal:
-            numToReadLocal = numTypeLocal - fileOff
+            numToReadLocal = int(numTypeLocal - fileOff)
 
         #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
         #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
