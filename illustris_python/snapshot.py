@@ -30,7 +30,7 @@ def getNumPart(header):
 
     nPart = np.zeros(nTypes, dtype=np.int64)
     for j in range(nTypes):
-        nPart[j] = header['NumPart_Total'][j] | (header['NumPart_Total_HighWord'][j] << 32)
+        nPart[j] = header['NumPart_Total'][j] | (np.int64(header['NumPart_Total_HighWord'][j]) << 32)
 
     return nPart
 
