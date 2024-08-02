@@ -42,7 +42,7 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
         if 'N'+nName+'_Total' not in header and nName == 'subgroups':
             nName = 'subhalos' # alternate convention
 
-        result['count'] = f['Header'].attrs['N' + nName + '_Total']
+        result['count'] = np.int64(f['Header'].attrs['N' + nName + '_Total'])
 
         if not result['count']:
             print('warning: zero groups, empty return (snap=' + str(snapNum) + ').')
