@@ -3,7 +3,7 @@ groupcat.py: File I/O related to the FoF and Subfind group catalogs. """
 from __future__ import print_function
 
 import six
-from os.path import isfile,expanduser
+from os.path import isfile,expanduser,split,join
 import numpy as np
 import h5py
 
@@ -21,7 +21,7 @@ def gcPath(basePath, snapNum, chunkNum=0):
 
 def offsetPath(basePath, snapNum):
     """ Return absolute path to a separate offset file (modify as needed). """
-    offsetPath = basePath + '/../postprocessing/offsets/offsets_%03d.hdf5' % snapNum
+    offsetPath = join(split(basePath)[0], '/postprocessing/offsets/offsets_%03d.hdf5' % snapNum)
 
     return offsetPath
 
