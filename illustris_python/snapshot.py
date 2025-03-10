@@ -6,10 +6,14 @@ import numpy as np
 import h5py
 import six
 from os.path import isfile
+import astropy.units as u
 
 from .util import partTypeNum
 from .groupcat import gcPath, offsetPath, loadSingle
 
+code_mass = u.def_unit('code_mass', 1.0e10 * u.solMass)
+code_length = u.def_unit('code_length', u.kpc)
+code_velocity = u.def_unit('code_velocity', u.km / u.s)
 
 def snapPath(basePath, snapNum, chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
@@ -94,6 +98,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
 
             # replace local length with global
             shape = list(f[gName][field].shape)
+            dset_attrs = dict(f[gName][field].attrs.items())
             shape[0] = numToRead
 
             # multi-dimensional index slice load
@@ -105,7 +110,13 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
             # allocate within return dict
             dtype = f[gName][field].dtype
             if dtype == np.float64 and float32: dtype = np.float32
-            result[field] = np.zeros(shape, dtype=dtype)
+            try:
+                result[field] = np.zeros(shape, dtype=dtype) * (code_mass**(dset_attrs['mass_scaling']) * 
+                                                                code_length**(dset_attrs['length_scaling']) * 
+                                                                code_velocity**(dset_attrs['velocity_scaling']))
+            except KeyError:
+                result[field] = np.zeros(shape, dtype=dtype)
+
 
     # loop over chunks
     wOffset = 0
@@ -113,6 +124,7 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
 
     while numToRead:
         f = h5py.File(snapPath(basePath, snapNum, fileNum), 'r')
+        Header = dict(f['Header'].attrs.items())
 
         # no particles of requested type in this file chunk?
         if gName not in f:
@@ -135,10 +147,22 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
         # loop over each requested field for this particle type
         for i, field in enumerate(fields):
             # read data local to the current file
+            dset = f[gName][field]
+            dset_attrs = dict(dset.attrs.items())
             if mdi is None or mdi[i] is None:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
+                try:
+                    result[field][wOffset:wOffset+numToReadLocal] = (dset[fileOff:fileOff+numToReadLocal] * Header['Time']**(dset_attrs['a_scaling']) * 
+                                                                     Header['HubbleParam']**(dset_attrs['h_scaling']) * code_mass**(dset_attrs['mass_scaling']) * 
+                                                                     code_length**(dset_attrs['length_scaling']) * code_velocity**(dset_attrs['velocity_scaling']))
+                except KeyError:
+                    result[field][wOffset:wOffset+numToReadLocal] = dset[fileOff:fileOff+numToReadLocal]
             else:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal, mdi[i]]
+                try:
+                    result[field][wOffset:wOffset+numToReadLocal] = (dset[fileOff:fileOff+numToReadLocal, mdi[i]] * Header['Time']**(dset_attrs['a_scaling']) * 
+                                                                     Header['HubbleParam']**(dset_attrs['h_scaling']) * code_mass**(dset_attrs['mass_scaling']) * 
+                                                                     code_length**(dset_attrs['length_scaling']) * code_velocity**(dset_attrs['velocity_scaling']))
+                except KeyError:
+                    result[field][wOffset:wOffset+numToReadLocal] = dset[fileOff:fileOff+numToReadLocal, mdi[i]]
 
         wOffset   += numToReadLocal
         numToRead -= numToReadLocal
