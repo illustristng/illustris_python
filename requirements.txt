@@ -2,6 +2,7 @@
 numpy
 h5py
 six
+astropy
 
 # Packages required for unit tests
 nose
