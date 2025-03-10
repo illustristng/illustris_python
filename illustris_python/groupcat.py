@@ -6,6 +6,11 @@ import six
 from os.path import isfile,expanduser,split,join
 import numpy as np
 import h5py
+import astropy.units as u
+
+code_mass = u.def_unit('code_mass', 1.0e10 * u.solMass)
+code_length = u.def_unit('code_length', u.kpc)
+code_velocity = u.def_unit('code_velocity', u.km / u.s)
 
 
 def gcPath(basePath, snapNum, chunkNum=0):
@@ -21,6 +26,9 @@ def gcPath(basePath, snapNum, chunkNum=0):
 
 def offsetPath(basePath, snapNum):
     """ Return absolute path to a separate offset file (modify as needed). """
+    # check for legacy format
+    if basePath[-1] == '/': basePath = basePath[:-1]
+
     offsetPath = join(split(basePath)[0], 'postprocessing/offsets/offsets_%03d.hdf5' % snapNum)
 
     return offsetPath
@@ -59,16 +67,23 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
 
             # replace local length with global
             shape = list(f[gName][field].shape)
+            dset_attrs =  dict(f[gName][field].attrs.items())
             shape[0] = result['count']
 
             # allocate within return dict
-            result[field] = np.zeros(shape, dtype=f[gName][field].dtype)
+            try:
+                result[field] = np.zeros(shape, dtype=f[gName][field].dtype) * (code_mass**(dset_attrs['mass_scaling']) * 
+                                                                                code_length**(dset_attrs['length_scaling']) * 
+                                                                                code_velocity**(dset_attrs['velocity_scaling']))
+            except KeyError:
+                result[field] = np.zeros(shape, dtype=f[gName][field].dtype) 
 
     # loop over chunks
     wOffset = 0
 
     for i in range(header['NumFiles']):
         f = h5py.File(gcPath(basePath, snapNum, i), 'r')
+        Header = dict(f['Header'].attrs.items())
 
         if not f['Header'].attrs['N'+nName+'_ThisFile']:
             continue  # empty file chunk
@@ -80,12 +95,23 @@ def loadObjects(basePath, snapNum, gName, nName, fields):
 
             # shape and type
             shape = f[gName][field].shape
+            dset_attrs =  dict(f[gName][field].attrs.items())
 
             # read data local to the current file
             if len(shape) == 1:
-                result[field][wOffset:wOffset+shape[0]] = f[gName][field][0:shape[0]]
+                try:
+                    result[field][wOffset:wOffset+shape[0]] = (f[gName][field][0:shape[0]] * Header['Time']**(dset_attrs['a_scaling']) * 
+                                                               Header['HubbleParam']**(dset_attrs['h_scaling']) * code_mass**(dset_attrs['mass_scaling']) * 
+                                                               code_length**(dset_attrs['length_scaling']) * code_velocity**(dset_attrs['velocity_scaling']))
+                except KeyError:
+                    result[field][wOffset:wOffset+shape[0]] = f[gName][field][0:shape[0]]
             else:
-                result[field][wOffset:wOffset+shape[0], :] = f[gName][field][0:shape[0], :]
+                try:
+                    result[field][wOffset:wOffset+shape[0], :] = (f[gName][field][0:shape[0], :] * Header['Time']**(dset_attrs['a_scaling']) * 
+                                                                  Header['HubbleParam']**(dset_attrs['h_scaling']) * code_mass**(dset_attrs['mass_scaling']) * 
+                                                                  code_length**(dset_attrs['length_scaling']) * code_velocity**(dset_attrs['velocity_scaling']))
+                except KeyError:
+                    result[field][wOffset:wOffset+shape[0], :] = f[gName][field][0:shape[0], :]
 
         wOffset += shape[0]
         f.close()
@@ -154,7 +180,14 @@ def loadSingle(basePath, snapNum, haloID=-1, subhaloID=-1):
     result = {}
 
     with h5py.File(gcPath(basePath, snapNum, fileNum), 'r') as f:
+        Header = dict(f['Header'].attrs.items())
         for haloProp in f[gName].keys():
-            result[haloProp] = f[gName][haloProp][groupOffset]
+            dset_attrs = dict(f[gName][haloProp].attrs.items())
+            try:
+                result[haloProp] = (f[gName][haloProp][groupOffset] * Header['Time']**(dset_attrs['a_scaling']) * 
+                                    Header['HubbleParam']**(dset_attrs['h_scaling']) * code_mass**(dset_attrs['mass_scaling']) * 
+                                    code_length**(dset_attrs['length_scaling']) * code_velocity**(dset_attrs['velocity_scaling']))
+            except KeyError:
+                result[haloProp] = f[gName][haloProp][groupOffset]
 
     return result

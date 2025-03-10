@@ -6,14 +6,11 @@ import numpy as np
 import h5py
 import six
 from os.path import isfile
-import astropy.units as u
 
 from .util import partTypeNum
 from .groupcat import gcPath, offsetPath, loadSingle
+from .groupcat import code_mass, code_length, code_velocity
 
-code_mass = u.def_unit('code_mass', 1.0e10 * u.solMass)
-code_length = u.def_unit('code_length', u.kpc)
-code_velocity = u.def_unit('code_velocity', u.km / u.s)
 
 def snapPath(basePath, snapNum, chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
