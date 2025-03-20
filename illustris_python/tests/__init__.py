@@ -4,7 +4,7 @@
 import os
 import sys
 
-BASE_PATH_ILLUSTRIS_1 = "/n/ghernquist/Illustris/Runs/L75n1820FP"
+BASE_PATH_ILLUSTRIS_1 = "/virgotng/universe/Illustris/L75n1820FP/output/"
 
 # Add path to directory containing 'illustris_python' module
 #    e.g. if this file is in '/n/home00/lkelley/illustris/illustris_python/tests/'
