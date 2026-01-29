@@ -14,6 +14,8 @@ authors = [
     { name="Dylan Nelson", email="dnelson@uni-heidelberg.de" },
 ]
 description = "illustris_python analysis package."
+license = "BSD-2-Clause"
+license-files = ["LICEN[CS]E*"]
 readme = "README.md"
 requires-python = ">3.7.0"
 dependencies = [
