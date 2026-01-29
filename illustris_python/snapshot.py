@@ -10,7 +10,6 @@ from os.path import isfile
 from .util import partTypeNum
 from .groupcat import gcPath, offsetPath, loadSingle
 
-
 def snapPath(basePath, snapNum, chunkNum=0):
     """ Return absolute path to a snapshot HDF5 file (modify as needed). """
     snapPath = basePath + '/snapdir_' + str(snapNum).zfill(3) + '/'
@@ -35,7 +34,7 @@ def getNumPart(header):
     return nPart
 
 
-def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, sq=True, float32=False):
+def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, sq=True, float32=False, result=None):
     """ Load a subset of fields for all particles/cells of a given partType.
         If offset and length specified, load only that subset of the partType.
         If mdi is specified, must be a list of integers of the same length as fields,
@@ -43,8 +42,11 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
           For example, fields=['Coordinates', 'Masses'] and mdi=[1, None] returns a 1D array
           of y-Coordinates only, together with Masses.
         If sq is True, return a numpy array instead of a dict if len(fields)==1.
-        If float32 is True, load any float64 datatype arrays directly as float32 (save memory). """
-    result = {}
+        If float32 is True, load any float64 datatype arrays directly as float32 (save memory). 
+        If result is not None, should be a dict containing pre-allocated ndarrays for each 
+        requested field. And optionally: {field}_write_offset specifying the starting write offset 
+        to place the result within result[{field}]."""
+    if result is None: result = {}
 
     ptNum = partTypeNum(partType)
     gName = "PartType" + str(ptNum)
@@ -103,12 +105,13 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
                 shape = [shape[0]]
 
             # allocate within return dict
-            dtype = f[gName][field].dtype
-            if dtype == np.float64 and float32: dtype = np.float32
-            result[field] = np.zeros(shape, dtype=dtype)
+            if field not in result:
+                dtype = f[gName][field].dtype
+                if dtype == np.float64 and float32: dtype = np.float32
+                result[field] = np.zeros(shape, dtype=dtype)
 
     # loop over chunks
-    wOffset = 0
+    wOffset = 0 if field+'_write_offset' not in result else result[field+'_write_offset']
     origNumToRead = numToRead
 
     while numToRead:
@@ -130,15 +133,20 @@ def loadSubset(basePath, snapNum, partType, fields=None, subset=None, mdi=None, 
             numToReadLocal = int(numTypeLocal - fileOff)
 
         #print('['+str(fileNum).rjust(3)+'] off='+str(fileOff)+' read ['+str(numToReadLocal)+\
-        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal))
+        #      '] of ['+str(numTypeLocal)+'] remaining = '+str(numToRead-numToReadLocal), flush=True)
 
-        # loop over each requested field for this particle type
+        # define slice in destination array
+        out_slice = np.s_[wOffset:wOffset+numToReadLocal]
+
+        # loop over each requested field for this particle type and load
         for i, field in enumerate(fields):
-            # read data local to the current file
-            if mdi is None or mdi[i] is None:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal]
-            else:
-                result[field][wOffset:wOffset+numToReadLocal] = f[gName][field][fileOff:fileOff+numToReadLocal, mdi[i]]
+            # define hyperslab in source file
+            source_slice = np.s_[fileOff:fileOff+numToReadLocal]
+            if mdi is not None and mdi[i] is not None:
+                source_slice = np.s_[fileOff:fileOff+numToReadLocal, mdi[i]]
+
+            #result[field][out_slice] = f[gName][field][source_slice]
+            f[gName][field].read_direct(result[field], source_sel=source_slice, dest_sel=out_slice)
 
         wOffset   += numToReadLocal
         numToRead -= numToReadLocal
