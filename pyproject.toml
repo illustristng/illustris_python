@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = [
+    "illustris_python"
+]
+
+[project]
+name = "illustris_python"
+version = "1.1.0"
+authors = [
+    { name="Dylan Nelson", email="dnelson@uni-heidelberg.de" },
+]
+description = "illustris_python analysis package."
+readme = "README.md"
+requires-python = ">3.7.0"
+dependencies = [
+    "h5py",
+    "numpy",
+    "six",
+]
+keywords = ["astronomy", "simulation", "cosmology", "astrophysics"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+
+[project.optional-dependencies] #[dependency-groups]
+test = [
+    "nose",
+    "coverage",
+]
+
+[project.urls]
+"Homepage" = "https://www.github.com/illustristng/illustris_python"
+"Bug Tracker" = "https://www.github.com/illustristng/illustris_python/temet/issues"
+"Documentation" = "https://www.tng-project.org/data/"
+
+[tool.ruff]
+#target-version = "py311"
+line-length = 120
+lint.select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "D",  # docstrings
+]
+format.skip-magic-trailing-comma = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D103"] # Missing docstring in function
