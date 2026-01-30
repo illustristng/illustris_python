@@ -9,7 +9,7 @@ packages = [
 
 [project]
 name = "illustris_python"
-version = "1.1.0"
+version = "1.1.1"
 authors = [
     { name="Dylan Nelson", email="dnelson@uni-heidelberg.de" },
 ]
