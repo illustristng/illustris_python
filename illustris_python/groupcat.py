@@ -53,7 +53,7 @@ def loadObjects(basePath, snapNum, gName, nName, fields, nThreads=None):
     result = {}
 
     if nThreads is None:
-        nThreads = environ.get('OMP_NUM_THREADS', 1)
+        nThreads = int(environ.get('OMP_NUM_THREADS', 1))
 
     # make sure fields is not a single element
     if isinstance(fields, six.string_types):
